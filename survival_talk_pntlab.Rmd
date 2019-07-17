@@ -8,6 +8,8 @@ output: ioslides_presentation
 ```{r include=FALSE}
 library(survival)
 library(survminer)
+library(dplyr)
+library(stringr)
 library(rms)
 ```
 
@@ -42,7 +44,11 @@ Don't dichotomize p-value!
 
 ```{r echo=FALSE}
 data(ovarian)
-ovarian.survfit <- survfit(Surv(futime, fustat) ~ rx, data = ovarian)
+ovarian <- ovarian %>%
+  mutate(treatment = case_when(rx == 1 ~ "Placebo", 
+                               rx == 2 ~ "Drug")) %>%
+  mutate(treatment = relevel(factor(treatment), ref = "Placebo"))
+ovarian.survfit <- survfit(Surv(futime, fustat) ~ treatment, data = ovarian)
 ggsurvplot(ovarian.survfit, data = ovarian, pval = T)
 ```
 
@@ -52,7 +58,6 @@ ggsurvplot(ovarian.survfit, data = ovarian, pval = T)
 - False Negative: Accept $H_0$ when $H_1$ is true
 
 ![](error_types.jpg)
-
 
 ## Power Tells Us About Type II Errors
 
@@ -76,7 +81,7 @@ ggsurvplot(ovarian.survfit, data = ovarian, pval = T)
 - Observational studies need to adjust for confounding
 - Randomized experiments randomly assign patients to groups
 - Phase II/III clinical trials are randomized (RCTs)
-- Randomization blocks any confounding
+- Randomization blocks confounding
 
 ## Statistical Goals Affect Analysis
 
@@ -87,8 +92,146 @@ ggsurvplot(ovarian.survfit, data = ovarian, pval = T)
 
 ## Time to Event Analysis
 
-- Many diseases don't have immediate outcomes i.e. cancer
-- Tracking time to event adds extra info that increases power
-- Cover censoring
+- Record time until event (death, heart attack)
+- Record status (1 = event, 0 = censored)
+- Using time instead of just status increases power
+
+![](censoring.png)
 
 ## Kaplan Meier Estimates Survival
+
+- Estimate survival function $S(t)$
+- Tells us probability of event occuring at time $t$
+- $S_{KM}(t) = \Pi (1 - \frac{d_i}{n_i})$
+- $d_i$ = # failures and $n_i$ = # patients at risk at $t$
+- Great for summary statistics - meh for inference
+
+## Kaplan Meier Estimates Survival
+
+```{r echo=TRUE, warning=TRUE}
+overall.survival <- survfit(Surv(futime, fustat) ~ 1, data = ovarian)
+ggsurvplot(overall.survival, conf.int = T)
+```
+
+
+## Log rank tests survival difference
+
+```{r include=FALSE}
+attach(aml)
+```
+
+```{r}
+aml.logrank <- survfit(Surv(aml$time, aml$status) ~ x, data = aml)
+ggsurvplot(aml.logrank, pval = T)
+```
+
+## Kaplan Meier has limitations
+
+- What if we need to adjust for confounders?
+- What if we have a continuous variable?
+- Where do we dichotomize?
+
+## Dichotomization is the root of all evil
+
+- Dichotomization discards $80\%$ of info losing power
+- Cutpoints are arbitrary
+- No real reason to choose median
+- Cutpoints often don't reproduce
+
+## Iterative Kaplan Meier isn't efficient
+
+- Repeated testing greatly inflates Type I error
+- MCMC simulation needed to correct p-values
+- Dichotomization requires many more patients to see effect
+- No literature on the procedure
+
+## Cox Proportional Hazards Model
+
+- Semi-parametric regression model
+- Can include multiple variables
+- Adjust for confounding
+- Model nonlinear effects with splines
+
+## Cox PH Interpretation
+
+```{r include=FALSE}
+getHdata(prostate)
+prostate <- prostate %>%
+  mutate(status = case_when(
+    str_detect(status, "alive") ~ 0,
+    str_detect(status, "dead") ~ 1
+  ))
+ddist <- datadist(prostate)
+options(datadist = "ddist")
+S <- Surv(prostate$dtime, prostate$status)
+```
+
+
+```{r}
+cph(S ~ age + rx, data = prostate)
+```
+
+## Modeling Nonlinear Effects
+
+```{r}
+nonlinear.fit <- cph(S ~ rcs(age, 5) + rx, data = prostate)
+nonlinear.fit
+```
+
+## Interpretting Nonlinear Effects
+
+```{r}
+anova(nonlinear.fit)
+```
+
+## Interpretting Nonlinear Effects
+
+```{r echo=FALSE}
+ggplot(Predict(nonlinear.fit, age, fun = exp)) + 
+  ggtitle("Effect of Age on Survival") +
+  labs(x = "Age (Years)", y = "Hazard Ratio")
+```
+
+## Treatment Heterogeneity
+
+- Treatment effects can vary among individuals
+- Use Wang and Ware paper
+
+## Verifying Proportional Hazards
+
+- PH assumes hazard ratio constant over time
+
+![](proportional_hazards.png)
+
+## Don't Cross Curves!
+
+- Crossing curves show PH violation
+
+![](crossing_curves.png)
+
+## cox.zph Tests for PH Violation
+
+```{r include=FALSE}
+ph.fit <- cph(S ~ rcs(age, 5) + rx, data = prostate, x=T, y=T)
+```
+
+- p-values $\geq$ .05 suggest PH isn't violated
+
+```{r}
+cox.zph(ph.fit)
+```
+
+## How To Fix PH Violations
+
+- Try splines for continuous variables
+- Don't care about effect then stratify
+- Use time $\times$ rx interaction to make effect time dependent
+- Switch to AFT models
+
+```{r echo=TRUE}
+f <- cph(S ~ rcs(age, 5) + strat(rx), data = prostate)
+```
+
+## Sample Size is Everything!
+
+- 
