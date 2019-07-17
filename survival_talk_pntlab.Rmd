@@ -1,0 +1,23 @@
+---
+title: "Survival Analysis"
+author: "Tomas Bencomo"
+date: "7/11/2019"
+output: ioslides_presentation
+---
+
+## Statistics Review
+
+- Power - Probability of incorrectly accepting $H_0$ (Type II Error)
+- $\alpha$ - Probability of incorrectly rejecting $H_0$ (Type I Error)
+- Observational study
+- Randomized Trial
+
+## Survival Analysis
+
+- Many diseases don't have immediate outcomes i.e. cancer
+- Tracking time to event adds extra info that increases power
+
+## Censoring
+
+- Some patients lost to follow-up
+- Others survive past study's end date
