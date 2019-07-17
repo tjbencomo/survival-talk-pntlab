@@ -1,18 +1,90 @@
 ---
 title: "Survival Analysis"
-author: "Tomas Bencomo"
-date: "7/11/2019"
+author: "Tomas Bencomo and Kyle Singleton"
+date: "7/26/2019"
 output: ioslides_presentation
 ---
 
-## Statistics Review
+```{r include=FALSE}
+library(survival)
+library(survminer)
+library(rms)
+```
 
-- Power - Probability of incorrectly accepting $H_0$ (Type II Error)
-- $\alpha$ - Probability of incorrectly rejecting $H_0$ (Type I Error)
-- Observational study
-- Randomized Trial
 
-## Survival Analysis
+## Overview
+
+- Statistics review
+- Why survival analysis
+- Censoring and Kaplan Meier
+- Cox Proportional Hazards
+- Sample Size
+- Missing Data
+- How to interpret statistics
+
+## Hypothesis Testing Evaluates Evidence
+
+Procedure:
+
+1. Determine null hypothesis $H_0$
+2. Choose effect size $\beta$ of interest
+3. Pick alternative hypothesis $H_1$
+4. Compute p-value
+5. Analyze evidence
+
+Don't dichotomize p-value!
+
+
+## Does A Treatment Affect Survival?
+
+- $H_0: \beta = 0$ Drug doesn't affect survival
+- $H_1: \beta \neq 0$ Drug affects survival
+
+```{r echo=FALSE}
+data(ovarian)
+ovarian.survfit <- survfit(Surv(futime, fustat) ~ rx, data = ovarian)
+ggsurvplot(ovarian.survfit, data = ovarian, pval = T)
+```
+
+## Hypothesis Tests Can Make Mistakes
+
+- False Positive: Reject $H_0$ when $H_0$ is true
+- False Negative: Accept $H_0$ when $H_1$ is true
+
+![](error_types.jpg)
+
+
+## Power Tells Us About Type II Errors
+
+- Probability of finding a false negative
+- $90%$ power is standard for preclinical experiments
+- Clinical trials often want $\geq 90\%$
+
+## Confounding Causes Us to Make Mistakes
+
+- Association between two variables explained by a third variable
+- Ice cream sales correlated with increased drownings?
+- Beware of lurking confounders like temperature!
+
+![](confounding.png)
+
+## Experimental Design Is Critical
+
+- Observational studies collect data without intervening
+- Cohort and case control studies are observational
+- Observational studies need to adjust for confounding
+- Randomized experiments randomly assign patients to groups
+- Phase II/III clinical trials are randomized (RCTs)
+- Randomization blocks any confounding
+
+## Statistical Goals Affect Analysis
+
+- Estimation focuses on estimating $\beta$'s
+- Effects estimation used in clinical trials
+- Prediction tries to make guesses about future events
+- Prediction modeling used for biomarker development and risk prediction
+
+## Time to Event Analysis
 
 - Many diseases don't have immediate outcomes i.e. cancer
 - Tracking time to event adds extra info that increases power
