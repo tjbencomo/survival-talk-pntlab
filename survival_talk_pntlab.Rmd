@@ -35,7 +35,7 @@ Procedure:
 Don't dichotomize p-value!
 
 
-## Does A Treatment Affect Survival?
+## Does Treatment Affect Survival?
 
 - $H_0: \beta = 0$ Drug doesn't affect survival
 - $H_1: \beta \neq 0$ Drug affects survival
@@ -58,9 +58,10 @@ ggsurvplot(ovarian.survfit, data = ovarian, pval = T)
 
 - Probability of finding a false negative
 - $90%$ power is standard for preclinical experiments
-- Clinical trials often want $\geq 90\%$
+- Clinical trials often want $\geq 90\%$ power
+- Cohort studies often won't analyze until enough patients collected
 
-## Confounding Causes Us to Make Mistakes
+## Confounding Creates Spurious Assocations
 
 - Association between two variables explained by a third variable
 - Ice cream sales correlated with increased drownings?
@@ -88,8 +89,6 @@ ggsurvplot(ovarian.survfit, data = ovarian, pval = T)
 
 - Many diseases don't have immediate outcomes i.e. cancer
 - Tracking time to event adds extra info that increases power
+- Cover censoring
 
-## Censoring
-
-- Some patients lost to follow-up
-- Others survive past study's end date
+## Kaplan Meier Estimates Survival
