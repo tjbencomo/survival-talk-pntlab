@@ -2,7 +2,9 @@
 title: "Survival Analysis"
 author: "Tomas Bencomo and Kyle Singleton"
 date: "7/26/2019"
-output: ioslides_presentation
+output: 
+  ioslides_presentation:
+    widescreen: true
 ---
 
 ```{r include=FALSE}
@@ -74,6 +76,28 @@ ggsurvplot(ovarian.survfit, data = ovarian, pval = T)
 
 ![](confounding.png)
 
+## Confounding Deceives Us
+
+```{r echo=FALSE}
+data("iris")
+iris %>%
+  ggplot(aes(Petal.Width, Sepal.Width)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("Sepal width decreases as petal width increase")
+```
+
+## Confounding Deceives Us
+
+```{r echo=FALSE}
+data("iris")
+iris %>%
+  ggplot(aes(Petal.Width, Sepal.Width)) +
+  geom_point(aes(color = Species)) +
+  geom_smooth(aes(color = Species), method = "lm")
+```
+
+
 ## Experimental Design Is Critical
 
 - Observational studies collect data without intervening
@@ -102,7 +126,7 @@ ggsurvplot(ovarian.survfit, data = ovarian, pval = T)
 
 - Estimate survival function $S(t)$
 - Tells us probability of event occuring at time $t$
-- $S_{KM}(t) = \Pi (1 - \frac{d_i}{n_i})$
+- $S_{KM}(t) = \Pi_{i:t_i \leq t} (1 - \frac{d_i}{n_i})$
 - $d_i$ = # failures and $n_i$ = # patients at risk at $t$
 - Great for summary statistics - meh for inference
 
@@ -137,6 +161,7 @@ ggsurvplot(aml.logrank, pval = T)
 - Cutpoints are arbitrary
 - No real reason to choose median
 - Cutpoints often don't reproduce
+- ADD THAT SLIDE FROM TWITTER WITH ALL THE PAPERS AGAINST DICHOTIMIZATION
 
 ## Iterative Kaplan Meier isn't efficient
 
@@ -144,6 +169,7 @@ ggsurvplot(aml.logrank, pval = T)
 - MCMC simulation needed to correct p-values
 - Dichotomization requires many more patients to see effect
 - No literature on the procedure
+- ADD DICHOTOMOUS KAPLAN MEIER WITH X
 
 ## Cox Proportional Hazards Model
 
@@ -153,6 +179,7 @@ ggsurvplot(aml.logrank, pval = T)
 - Model nonlinear effects with splines
 
 ## Cox PH Interpretation
+
 
 ```{r include=FALSE}
 getHdata(prostate)
@@ -167,16 +194,19 @@ S <- Surv(prostate$dtime, prostate$status)
 ```
 
 
-```{r}
-cph(S ~ age + rx, data = prostate)
+```{r echo=TRUE, collapse=TRUE}
+model <- cph(S ~ age + rx, data = prostate)
 ```
+
+![](cox_output.png)
 
 ## Modeling Nonlinear Effects
 
 ```{r}
 nonlinear.fit <- cph(S ~ rcs(age, 5) + rx, data = prostate)
-nonlinear.fit
 ```
+
+![](nonlinear_cox_output.png)
 
 ## Interpretting Nonlinear Effects
 
@@ -248,7 +278,7 @@ f <- cph(S ~ rcs(age, 5) + strat(rx), data = prostate)
 - (Bad) rule of thumb: 15 events per variable (EPV) 
 - In reality EPV much more complicated
 - Subgroup heterogeneity harder to detect
-- Requires 4x the sample size
+- Often need $\geq 4n$ samples
 
 ## Basement Power Calculations
 
@@ -277,7 +307,7 @@ f <- cph(S ~ rcs(age, 5) + strat(rx), data = prostate)
 
 ## How to Choose Features
 
-- Proper selection strategies  
+- Proper selection strategies:  
     1. Domain expert specifies relevant variables
     2. Add all variables and use shrinkage
     3. Data reduction blinded to response
@@ -296,6 +326,10 @@ f <- cph(S ~ rcs(age, 5) + strat(rx), data = prostate)
 - Look for missing data patterns
 - Clustering finds variables that are missing together
 
+## Clustering Missing Data
+
+- Include code example and naclus plot
+
 ## Imputation Gives Us The Power
 
 - Data missing at random (MAR) can be imputed
@@ -303,7 +337,6 @@ f <- cph(S ~ rcs(age, 5) + strat(rx), data = prostate)
 - Better to guess values than discard all info from patient
 - MICE imputation maintains statistical validity
 - FIND A DATASET AND SHOW CODE
-
 
 ## Imputation Recommendations
 
