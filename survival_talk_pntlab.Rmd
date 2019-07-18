@@ -205,6 +205,12 @@ ggplot(Predict(nonlinear.fit, age, fun = exp)) +
 
 ## Don't Cross Curves!
 
+![](crossing_streams.jpg)
+
+- Proportional hazards assumption can come back to haunt you!
+
+## Don't Cross Curves!
+
 - Crossing curves show PH violation
 
 ![](crossing_curves.png)
@@ -234,4 +240,77 @@ f <- cph(S ~ rcs(age, 5) + strat(rx), data = prostate)
 
 ## Sample Size is Everything!
 
-- 
+- Sample size affects power
+- More samples means more precision to detect smaller effects
+- $n$ = number of events NOT patients
+- Kaplan Meier needs $n=184$ patients for $\pm .1$ error margins
+- Adding covariates requires $n >> 184$
+- (Bad) rule of thumb: 15 events per variable (EPV) 
+- In reality EPV much more complicated
+- Subgroup heterogeneity harder to detect
+- Requires 4x the sample size
+
+## Basement Power Calculations
+
+- Use calculator and show some example powers
+
+## What Variables to Include
+
+- Available sample size limits number of variables to include
+- Variable selection significantly impacts inference
+- Estimation worried about confounding
+- Prediction worried about overfitting
+
+## Univariate Feature Selection is Bad!
+
+- Common to build univariate models for each feature first
+- Build combined model with only significant univariate features
+- Specific type of stepwise regression
+- FIND EXAMPLE OF UNIVARIATE REGRESSION TABLE
+
+## Stepwise Selection Wrecks Inference
+
+- Univariate selection can be highly variable
+- Doesn't adjust for confounding
+- P-values and CIs for the combined model will be invalid
+- Lacking sound statistical theory
+
+## How to Choose Features
+
+- Proper selection strategies  
+    1. Domain expert specifies relevant variables
+    2. Add all variables and use shrinkage
+    3. Data reduction blinded to response
+- These approaches prevent overfitting
+- Leave insignificant variables in the model
+- Include possible confounders
+
+
+## Don't Discard Patients with Missing Data
+
+- Missing data can significantly decrease sample size
+- Goal is to maximize sample size for max power
+- Ask why is this data missing?
+- Missing values can indicate selection bias
+- Missing lab values b/c died before surgery could happen
+- Look for missing data patterns
+- Clustering finds variables that are missing together
+
+## Imputation Gives Us The Power
+
+- Data missing at random (MAR) can be imputed
+- Features with missing data will already have more uncertain estimates
+- Better to guess values than discard all info from patient
+- MICE imputation maintains statistical validity
+- FIND A DATASET AND SHOW CODE
+
+
+## Imputation Recommendations
+
+- $< 3\%$ missing: median imputation or casewise deletion
+- $\geq 3\%$ missing: MICE with max(5, 100x) imputations
+- Many predictors frequently missing: sensitivity analysis with more imputations
+
+## Evaluating Biomarkers
+
+## Interpretting Statistical Results
