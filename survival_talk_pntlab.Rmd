@@ -8,11 +8,14 @@ output:
 ---
 
 ```{r include=FALSE}
+library(readr)
 library(survival)
 library(survminer)
 library(dplyr)
 library(stringr)
 library(rms)
+library(tidyr)
+library(mice)
 ```
 
 
@@ -126,8 +129,6 @@ iris %>%
 
 - Estimate survival function $S(t)$
 - Tells us probability of event occuring at time $t$
-- $S_{KM}(t) = \Pi_{i:t_i \leq t} (1 - \frac{d_i}{n_i})$
-- $d_i$ = # failures and $n_i$ = # patients at risk at $t$
 - Great for summary statistics - meh for inference
 
 ## Kaplan Meier Estimates Survival
@@ -161,7 +162,8 @@ ggsurvplot(aml.logrank, pval = T)
 - Cutpoints are arbitrary
 - No real reason to choose median
 - Cutpoints often don't reproduce
-- ADD THAT SLIDE FROM TWITTER WITH ALL THE PAPERS AGAINST DICHOTIMIZATION
+
+![](km_cut.png)
 
 ## Iterative Kaplan Meier isn't efficient
 
@@ -169,7 +171,7 @@ ggsurvplot(aml.logrank, pval = T)
 - MCMC simulation needed to correct p-values
 - Dichotomization requires many more patients to see effect
 - No literature on the procedure
-- ADD DICHOTOMOUS KAPLAN MEIER WITH X
+
 
 ## Cox Proportional Hazards Model
 
@@ -222,10 +224,17 @@ ggplot(Predict(nonlinear.fit, age, fun = exp)) +
   labs(x = "Age (Years)", y = "Hazard Ratio")
 ```
 
-## Treatment Heterogeneity
+## Effect Heterogeneity
 
-- Treatment effects can vary among individuals
-- Use Wang and Ware paper
+- Treatment and exposure effects can vary among individuals
+- Interactions test for subgroup heterogeneity
+
+```{r}
+i.fit <- cph(S ~ rx*rcs(age, 3), data=prostate)
+ggplot(Predict(i.fit, age, rx = c("0.2 mg estrogen", "1.0 mg estrogen", "5.0 mg estrogen"), fun = exp))
+```
+
+
 
 ## Verifying Proportional Hazards
 
@@ -315,7 +324,6 @@ f <- cph(S ~ rcs(age, 5) + strat(rx), data = prostate)
 - Leave insignificant variables in the model
 - Include possible confounders
 
-
 ## Don't Discard Patients with Missing Data
 
 - Missing data can significantly decrease sample size
@@ -336,14 +344,54 @@ f <- cph(S ~ rcs(age, 5) + strat(rx), data = prostate)
 - Features with missing data will already have more uncertain estimates
 - Better to guess values than discard all info from patient
 - MICE imputation maintains statistical validity
-- FIND A DATASET AND SHOW CODE
+
+## Imputation Gives Us the Power
+
+```{r include=FALSE}
+patients <- read_csv("~/code/gbm-location-survival/data/julia_location_cohort_data.csv")
+patients <- patients %>%
+  select(Patient.ID, Sex, age.at.diagnosis, Overall.Survival, 
+         censorship, extent.resection, PI.D.p, KPS) %>%
+  drop_na(censorship) %>%
+  rename(age = age.at.diagnosis,
+         d.rho = PI.D.p,
+         kps = KPS,
+         resection = extent.resection,
+         os.time = Overall.Survival,
+         status = censorship)
+impute_transform <- mice(patients, method = 'pmm')
+S <- Surv(patients$os.time, patients$status == 0)
+ddist <- datadist(patients)
+options(datadist = "ddist")
+```
+
+```{r echo=T, eval=F}
+impute_transform <- mice(patients, method = 'pmm')
+S <- Surv(patients$os.time, patients$status == 0)
+fit <- fit.mult.impute(S ~ rcs(age, 3) + resection + rcs(d.rho, 3) + 
+                  rcs(kps, 3), cph, impute_transform, data = patients)
+```
 
 ## Imputation Recommendations
 
 - $< 3\%$ missing: median imputation or casewise deletion
 - $\geq 3\%$ missing: MICE with max(5, 100x) imputations
-- Many predictors frequently missing: sensitivity analysis with more imputations
-
-## Evaluating Biomarkers
+- May want to conduct sensitivity analysis with more imputations
 
 ## Interpretting Statistical Results
+
+- $p \geq .05$ does not mean no effect!
+- Look at effect size not just p-value
+- Don't dichotomize findings based on p-values
+- Use confidence intervals instead
+- Think about power limitations
+
+## Theres Always More Out There...
+
+- Evaluating biomarker efficacy
+- Validating prediction models
+- Data reduction strategies
+- High dimensional survival modeling
+- Simulation experiments and power calculations
+- Randomized clinical trial design
+- Multiple comparisons adjustment
