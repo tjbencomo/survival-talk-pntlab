@@ -1,5 +1,5 @@
 # survival-talk-pntlab
-Talk on best practices for survival analysis at the Precision Neurotheraputic Lab at Mayo Clinic. 
+Talk on best practices for survival analysis given at the Mayo Clinic Precision Neurotheraputic Lab (Summer 2019). 
 
 ## TODO
 * Decide which example to use for confounding
