@@ -13,7 +13,7 @@ several topics needed for survival analyis including:
 * Interpretation and reporting of statistical results
 * Awareness of problems with observational data (covariate imbalance, confounding etc)
 
-## Dislaimer
+## Disclaimer
 Neither Tomas Bencomo nor Kyle W. Singleton are PhD statisticians, but
 we both use statistics in our work as biomedical researchers.
 Kyle has a PhD in biomedical informatics, and Tomas is a computer science major 
