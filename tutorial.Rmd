@@ -1,6 +1,12 @@
 ---
 title: "Prostate Cancer Case Study"
-output: 
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+    toc_float:
+      collapsed: yes
   html_notebook:
     toc: yes
     toc_depth: 3
@@ -10,16 +16,20 @@ output:
 
 ## Introduction
 
-This notebook is meant to show readers how to write code
-for survival analysis. Readers should have some knowledge
-of R. Tasks like calling functions, loading data, and manipulating
-dataframes should be familiar to the reader.
+This notebook will demonstrate how to write code
+for survival analysis. Readers should already know the basics of R. 
+Calling functions, loading data, and manipulating
+dataframes should be familiar. It'll also
+be helpful to have taken an introductory statistics course
+and understand concepts like linear regression,
+hypothesis testing, p-values, and confidence intervals.
 
 Today we'll be examining a dataset from Green and Byar
 (1980, Bulletin Cancer, Paris, 67, 477-488) with 502
 prostate cancer patients from a randomized clinical
-trial. The dataset includes information on cancer stage,
-treatment, age, weight, and additional clinical measurements.
+trial for estrogen therapy. The dataset includes information 
+on cancer stage, treatment, age, weight, and 
+additional clinical measurements.
 
 First, we load the necessary packages.
 
@@ -30,11 +40,12 @@ library(dplyr)
 library(ggplot2)
 library(mice)
 library(stringr)
+library(tidyr)
 ```
 
 `rms` provides tools for regression modeling. `dplyr` helps
 us easily manipulate dataframes. `ggplot2` will allow us
-to visualize our data. `rpart` and `mice` help us deal
+to visualize our data. `rpart`, `mice`, and `tidyr` help us deal
 with missing data. `stringr` makes it easier to work
 with strings. 
 
@@ -45,27 +56,32 @@ getHdata(prostate)
 head(prostate)
 ```
 
-Before we begin our analysis, ideally we would have already prespecified
-what questions we'd like to answer. In this tutorial we'll focus on
-the following questions:
+Before we begin our analysis, we should have already prespecified what
+questions we want to answer. Designing questions to investigate
+beforehand helps us plan the statistical analysis, mitigating bias.
+If we're conducting an exploratory analysis or data mining investigation,
+we should remember this as we weigh any significant findings. 
+
+In this tutorial we'll focus on the following questions:
 
 1. What effect does treatment have on survival?
+2. How does age affect survival?
 2. Does the effect of age on survival differ depending
 on a patient's activity level?
 3. What factors are most prognostic of survival?
 
 ## Data Preparation
 
-Once data has been collected, before modeling it's important
+Before modeling it's important
 to conduct Exploratory Data Analysis (EDA) to become familiar
-with the nuances of the data. This often includes looking
+with data nuances. This often includes looking
 at the distribution of each variable and understanding patterns 
 between variables. 
 
 ### Data Cleaning
 
 There's a few adjustments to the prostate data we'll need to
-make before modeling. `status` is encoding with the cause of death.
+make. `status` is encoding with the cause of death.
 Let's ignore cause of death and encode status so 1 means death
 and 0 means censored.
 
@@ -101,35 +117,48 @@ EDA often informs us about missing data.
 Understanding and addressing missing data is crucial for
 modeling success. Excluding patients due to missing data can
 decrease sample size reducing power. It also risks biasing
-the analysis if missing values are missing to a systematic reason.
+the analysis if missing values are missing for a systematic reason.
 
 For example, say blood pressure is only measured after surgery.
-If some patients die during surgery and are missing blood pressure
-measurements, excluding these patients from analysis will create
-selection bias as we are only analyzing patients that managed to
-survive surgery.
+If some patients die during surgery and they'll be missing
+post-op blood pressure measurements.Excluding these patients from 
+analysis will cause selection bias as we are only analyzing patients 
+that managed to survive surgery.
 
 There are three types of missing data:
 
 * Missing at Completely Random (MCAR) - Data is missing due
 to errors like a dropped test tube in the hospital's lab.
-* Missing at Random (MAR) - Data is not missing at random,
-but the probability of data being missing depends on the
+Because these data are missing due to random chance, it's
+impossible to predict their missingness.
+* Missing at Random (MAR) - Data is not missing completely at 
+random, but the probability of data being missing depends on the
 other measured variables.
 * Informative Missing (MI) - Missing data is dependent
-on some piece of information you haven't measured. This is the
-most difficult type of missing data to account for, and often
-nothing can be done.
+on some piece of information we haven't measured. This is the
+most difficult type of missing data to account for, and special
+modeling techniques are often needed. If your data is MI, go
+find a statistician.
 
-After EDA, it's important to characterize what data is missing
-and why it's missing. It's best to consult with a domain expert
+It's important to characterize what data is missing
+and why. It's best to consult with a domain expert
 to understand why data is missing. Make sure to describe missing
 data patterns when reporting results so readers can understand
 limitations of your analysis.
 
-To help uncover these patterns, `rms` provides functions identify
-variables with missing data that seem similar according to a cluster
-analysis.
+To help uncover these patterns, `rms` and `mice` provide functions
+to identify missing data patterns. First let's see which variables
+are missing values.
+
+
+```{r}
+md.pattern(prostate)
+```
+
+This tells us that 475 patients have complete data (blue indicates no missing values).
+11 patients are missing `sg` measurements (red indicates missingness) and so on.
+No patients are missing multiple measurements.
+
 
 `naclus`  and `naplot` summarizes info about how often each variable 
 is missing.`na per var` tells `naplot()` to only show how many
@@ -138,12 +167,14 @@ more info.
 
 ```{r}
 na.patterns <- naclus(prostate)
-naplot(na.patterns, 'na per var')
+naplot(na.patterns)
 ```
 
 From these plots, we can see `age`, `wt`, `sz`, `ekg`, and `sg` all have missing values.
 We can also use decision trees to identify which types of patients were likely
-to have `sg` missing.
+to have `sg` missing. This builds a model to predict which patients will be missing
+`sg` based on other patient characteristics. Note the formula syntax in the `rpart`
+call.
 
 ```{r}
 who.na <- rpart(is.na(sg) ~ stage + rx + pf + hx + sbp + dbp + 
@@ -152,10 +183,9 @@ plot(who.na, margin = .1)
 text(who.na)
 ```
 
-This decision tree analysis tells us which variable seem to
-predict the missing status of `sg`. In a real analysis, now would
-be a good time to pause and ask ourselves why `dbp` and `hg` are
-predictive of missing `sg`. 
+It looks like `dbp` and `hg` are predictors of `sg` missingness.
+Now would be a good time to consult the clinician to ask why `dbp` 
+and `hg` are predictive of missing `sg`. 
 
 It's also good to know which variables are missing simultaneously from
 patients. The code below demonstrates this function
@@ -168,12 +198,16 @@ In this case, so few data is missing that the plot looks empty.
 If more data was missing, the plot would show a clustering map that
 groups variables missing together most often. This plot can help us identify
 which variables may dependent on each other (they may be measured at the same time). 
-The empty plot indicates there isn't a systematic issue with missing data.
+The empty plot indicates there isn't a systematic issue with missing data. To see
+more examples with `plot(na.patterns)`, refer to Frank Harrell's 
+[Regression Modeling Strategies (RMS)](http://hbiostat.org/doc/rms.pdf) 
+Chapter 12.4 for another case study on missing data. You'll see a proper
+clustering example.
 
 After we've characterized missing data patterns, it's time to decide
-whether we are going to impute missing data, exclude certain variables
-from our analysis, or exclude certain patients. Here's how to approach
-imputation:
+how to tackle our missing data. 
+
+Harrell proposes a general rule of thumb when deciding how to approach missing data:
 
 | Amount Missing                         | What to do                                 |
 |----------------------------------------|--------------------------------------------|
@@ -183,48 +217,91 @@ imputation:
 
 Median imputation is where we compute a median value for a variable, and replace
 all missing values with this median. Case-wise deletion means exlcuding patients
-with any missing values from analysis. 
+with any missing values from analysis. If a sensitivity analysis is needed, 
+consult a statistician.
 
-When a variable of interest has more than a small amount of missing data,
-it's up to the analyst to decide whether the variable should be dropped
-from the analysis. If the variable is not considered important, this may
-be appropriate. Otherwise, Multiple Imputation by Chained Equation (MICE)
-is the preferred approach to impute missing data. MICE uses the other
-variables to try and "guess" the missing value, adding a random error
-component to each prediction. We use MICE to generate several datasets
-where missing data has been "guessed", train a model for each dataset,
-and then average the results from each model to get a final "averaged"
-model. Using multiple datasets ensures we properly account for
-uncertainty in our estimates. 
+Using MICE requires two key decision:
 
+1. Is the MAR assumption plausible? If we can't assume MAR,
+time to find a statistician. 
 
-```{r echo=T, results='hide'}
-impute_transform <- mice(prostate, m = 5, method = 'pmm')
+2. Assuming MAR, how will we model our missing data? What variables
+should we use as information in our model?
+
+If a sensitivity analysis is needed, consult a statistician.
+
+1\) ultimately comes down to whether we think
+there are unmeasured variables that **significantly** correlate with
+missingness. Unmeasured variables that are only slightly correlated with 
+missingness should not prevent us from assuming MAR. We can also gather
+additional information outside of our survival analysis parameters of interest
+to build the imputation model. Although we may not be interested in analyzing
+the effect of hospital location on survival, we can still include this variable
+in our imputation model if it will help predict missingness. See section
+6.2 in Stef van Burren's 
+[Flexible Imputation of Missing Data (FIMD)](https://stefvanbuuren.name/fimd/sec-whenignorable.html)
+for more details on deciding about MAR assumptions.
+
+For 2), we can model missing data using MICE (Multiple Imputation 
+By Chained Equation). We tell MICE which variables
+affect missingness, and then MICE uses these variables to
+generate a dataset with predicted values for missing data. Each predicted
+value has a random error component. We generate several datasets with
+different predicted values, analyze each dataset separate, and then
+average our results across datasets. Using multiple datasets
+retains the uncertainty from data being missing in the first place.
+
+To use MICE, we need to specify our imputation model: which variables are we
+going to include, what imputation method are we going to use,
+and what order will we impute variables. MICE chooses chooses
+robust defaults for all of these decisions. Predictive
+Mean Matching `pmm` is the default imputation method. 
+When we pass `mice` a dataframe it will use all variables
+in the dataframe for the imputation model. If there are more than
+20-30 variables in the imputation model, MICE will slow down and
+may not run. In this case, we can tell MICE to only use some
+variables. Make sure to include all variables
+that you'll be analyzing (anything that is going in the Cox regression)
+and any variables that you suspect play a role in missingness.
+
+See van Burren 
+[section 6.3](https://stefvanbuuren.name/fimd/sec-modelform.html)
+for how to set which variables to include and more info
+on choosing variables.
+
+Now let's actually impute our missing data with MICE!
+
+```{r echo=T, eval=FALSE}
+impute_transform <- prostate %>%
+  select(-patno, sdate) %>%
+  mice(m = 5, method = 'pmm')
 impute_fit <- fit.mult.impute(Surv(dtime, status) ~ rx + stage + rcs(age, 3), 
                               cph, impute_transform, data = prostate)
 ```
 
 This code does two things. First, we use `mice()` to impute our missing data.
-The first argument (prostate in our example) should be the dataframe 
-you want to impute on. Only include columns in this dataframe that
-have missing values that need to be imputed, or columns that you think
-will provide information to help guess the missing values. Including
-extra columns like PatientNumber, which shouldn't offer any help guessing
-missing values, shouldn't be included because this will slow down the imputation
-process. `m` is the number of imputations to generate. `method = 'pmm'` specifies
+The first argument `prostate` should be the dataframe 
+with missing values and any extra info about these missing values. Don't include
+useless columns like PatientNumber. This will only slow down or worsen the imputation.
+Notice we removed `patno` and `sdate` before using `mice()`.
+process. `m` is the number of imputations to generate. `method = 'pmm'` tells MICE
 which imputation algorithm to use.
 
 After mice has run, `fit.mult.impute()` will build a model for each
 imputed dataset and average the models for us. The first argument is
 the regression formula you desire - don't worry about the formula above,
-this will be explained in more detail below. `cph` is the type of regression
+this will be explained in more detail later. `cph` is the type of regression
 model you want to use. `impute_transform` is the imputation object `mice`
 created for us. 
 
-The prostate dataset doesn't have lots of missing data, so imputation is relatively
-straightforward. If multiple predictors are frequently missing however, a sensitivity
-analysis is probably required. 
+Missing data can be a complex and important topic when modeling
+survival data. For more info, check out RMS Chapter 3 or van Burren's
+FIMD (both referenced above). Because so few values are missing, we'll opt
+for casewise completion for the rest of this tutorial.
 
-Sensitivity analysis is a more difficult business; it requires an understanding
-of the underlying imputation algorithm. If you find yourself needing to do a
-sensitivity analysis, best to go ask a statistician.
+```{r}
+prostate <- prostate %>%
+  drop_na()
+```
+
+## Model Fitting
