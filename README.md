@@ -1,5 +1,5 @@
 # survival-talk-pntlab
-Talk on best practices for survival analysis given at the Mayo Clinic Precision Neurotheraputics Lab (Summer 2019). 
+Best practices for survival analysis given at the Mayo Clinic Precision Neurotheraputics Lab (Summer 2019). 
 
 ## Goals
 The talk is meant to introduce non-statisticians to 
@@ -15,3 +15,14 @@ Make sure the following `R` packages are installed before running the notebook
 ```
 install.packages(c("rms", "rpart", "dplyr", "ggplot2", "mice", "stringr", "tidyr"))
 ```
+
+## About the Authors
+**Tomas Bencomo** is a B.S candidate in Computer Science at Stanford
+University. His research interests focus on using data to accelerate
+biological discoveries, improve physician decision making, and evaluate
+new biomedical discoveries.
+
+**Kyle W. Singleton** is a Research Fellow at the Precision Neurotheraputics Lab
+at Mayo Clinic Arizona. He received his PhD in Biomedical Informatics from UCLA. His
+research focuses on radiomics methods using Magnetic Resonance Imaging (MRI) to
+guide treatment decisions for Glioblastoma patients. 
