@@ -20,7 +20,7 @@ install.packages(c("rms", "rpart", "dplyr", "ggplot2", "mice", "stringr", "tidyr
 **Tomas Bencomo** is a B.S candidate in Computer Science at Stanford
 University. His research interests focus on using data to accelerate
 biological discoveries, improve physician decision making, and evaluate
-new biomedical discoveries.
+new medical interventions.
 
 **Kyle W. Singleton** is a Research Fellow at the Precision Neurotheraputics Lab
 at Mayo Clinic Arizona. He received his PhD in Biomedical Informatics from UCLA. His
