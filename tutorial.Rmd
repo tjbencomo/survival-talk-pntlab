@@ -444,6 +444,10 @@ If this is true, don't remove the nonlinear age term from
 the model - that violates p-value inference and will decrease
 model performance. 
 
+See my Cross Validated 
+[post](https://stats.stackexchange.com/questions/405832/interpretting-cox-regression-anova)
+for more details on interpretting the ANOVA.
+
 ### Proper subgroup analysis using interactions
 
 Precision medicine emphasizes treatment effect
@@ -471,7 +475,7 @@ problematic when the subgroups are imbalanced. If there were 4x
 more males than females, it will be easier to find a "significant"
 hazard ratio for the males than the females because there are more
 sapmles. Finding a significant hazard ratio in one cohort but not
-the other doesn't necessarily mean the effect sizes are differently;
+the other doesn't necessarily mean the effect sizes are different;
 a smaller sample size in the female cohort may be making the p-value
 larger even though the underlying hazard ratios are the same.
 
