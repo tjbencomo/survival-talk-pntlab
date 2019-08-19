@@ -9,3 +9,9 @@ several topics needed for survival analyis including:
 * Maximizing sample size with imputation
 * Interpretation and reporting of statistical results
 * Awareness of problems with observational data (covariate imbalance, confounding etc)
+
+## Dependencies
+Make sure the following `R` packages are installed before running the notebook
+```
+install.packages(c("rms", "rpart", "dplyr", "ggplot2", "mice", "stringr", "tidyr"))
+```
