@@ -66,8 +66,7 @@ In this tutorial we'll focus on the following questions:
 
 1. What effect does treatment have on survival?
 2. How does age affect survival?
-2. Does the effect of age on survival differ depending
-on a patient's activity level?
+2. Does bone metastases effect treatment efficacy?
 3. What factors are most prognostic of survival?
 
 ## Data Preparation
@@ -305,3 +304,253 @@ prostate <- prostate %>%
 ```
 
 ## Model Fitting
+
+With our data clean, we can move on to modeling. 
+Cox Proportional Hazards (PH) regression is one of the
+most popular forms of survival analysis because 
+we can analyze many variables with assumptions
+that are often reasonable for clinical practice.
+
+The R packages `survival` and `rms` provide Cox
+regression functionality. In `survival`, users
+call `coxph()` while `cph()` is used in `rms`.
+We'll focus on `cph()` because both work similarly
+and `cph` adds some extra functionality. 
+
+We're trying to evaluate how several variables,
+including treatment `rx` affects survival. Cox
+let's us analyze the impact of several variable
+simultaneously by including any relevant
+variables in the regression equation. 
+
+We want to know if treatment improved
+survival for prostate patients and how
+age is related to survival.
+
+Before we can start modeling, we need
+to tell `rms` how the data is formatted.
+
+```{r}
+ddist <- datadist(prostate)
+options(datadist="ddist")
+```
+
+Including treatment `rx` and age `age` in
+our regression model will answer both
+these questions.
+
+```{r}
+fit <- cph(Surv(dtime, status) ~ rx + age, data = prostate)
+fit
+```
+
+`cph` uses the formula notation to specify regression models. In
+formula notation, the response variable (usually denoted `Y`) is placed
+on the left hand side of the `~` and explanatory variables go
+on the right hand side (usually denoted `X`).
+
+Our response variable `Y` is censored survival time outcomes,
+represented by `Surv(dtime, status)`. `Surv` uses time to event (`dtime`)
+and the outcome (`status`) to convert this info into a format
+readable by `R`. On the right hand side we've included `rx` and
+`age` as our explanatory variables. 
+
+Printing `fit` shows the log(Hazard Ratio) and p-value for
+each explanatory variable. `rx` shows up multiple times because
+it is a factor with multiple levels. Each coefficent for `rx` is
+for that dose compared against control. 
+
+Age is treated as a continuous variable, with the assumption
+that age is linearly related to survival. With our data,
+this means that for every additional year patients will have
+an added $e^{0.0322} = $ `r exp(0.0322)`
+
+To visualize age's relation to survival, we plot
+age vs hazard
+
+```{r}
+ggplot(Predict(fit, age)) +
+  labs(x = "Age in Years") +
+  ggtitle("Relationship between age and hazard")
+```
+
+Remember that a log hazard ratio > 0 means an increased risk of death. 
+To plot hazard ratio instead, set `fun = exp` inside `Predict()`. The plot
+shows that patients over the age of 70 have an increased risk of death from
+prostate cancer. A naive reader might see this hazard ratio and the p-value for
+age (p=.003) and conclude age causes patients to die. Careful! Although age
+may be causally linked to death, this RCT wasn't designed to test age's causal
+effect on survival, only its relation. Hazard ratios and p-values alone
+can never determine causality for a variable; causality is determined
+by the experimental design. Avoiding making causal statements just because
+of small p-values!
+
+### Relaxing the linearity assumption
+
+Some continuous variables may not be linearly related to survival.
+When we have sufficient sample size, it's optimal to treat
+these variables as nonlinear. This will improve power
+to detect a relationship and can improve effect estimation.
+
+`rms` uses `rcs()` to model nonlinear variable with
+restricted cubic splines. We can use splines to treat
+age as if it's nonlinearly related to survival.
+
+```{r}
+nonlinear.fit <- cph(Surv(dtime, status) ~ rx + rcs(age,3), data = prostate)
+nonlinear.fit
+```
+
+We must choose how many knots to use when modeling nonlinear
+variables. The number of knots determines how closely the
+regression fits the data. It's recommended to use 3 to 5 knots
+for most problems: 3 for small datasets (~300 samples),
+4 for medium datasets (~500 samples), and 5 for large datasets 
+(~700 samples). Choosing the wrong number of knots can overfit
+the model. We chose 3 knots due to our smaller sample size. 
+
+Multiple parameters are needed to model a nonlinear variable
+(`age` and `age'`). This makes interpretting our results more complicated.
+Instead of just looking at the coefficient for `age`, we'll need to plot
+age vs hazard. 
+
+```{r}
+ggplot(Predict(nonlinear.fit, age)) +
+  labs(x = "Age in Years") +
+  ggtitle("Relationship between age and hazard")
+```
+
+A one year increase in age no longer has a simple effect on survival.
+It seems patients younger than 70 are all at a relatively equal
+lower probability of death from prostate cancer. After about 70 years of age, patients
+are at an increased risk. P-values are also not as straightforward to
+interpret. Because age can have a non-monotonic relationship with
+survival, we need a p-value to test if the nonlinear age function
+is associated with survival. 
+
+Using a chunk ANOVA test, we can compute p-values
+testing whether each predictor is associated with survival.
+
+```{r}
+anova(nonlinear.fit)
+```
+
+Both `rx` and `age` have strong evidence
+suggesting they're associated with survival.
+The nonlinear p-value subsection under Age tests
+whether there is evidence of a nonlinear relationship
+between age and survival. If the p-value is large,
+this may mean age is  linearly related to survival.
+If this is true, don't remove the nonlinear age term from
+the model - that violates p-value inference and will decrease
+model performance. 
+
+### Proper subgroup analysis using interactions
+
+Precision medicine emphasizes treatment effect
+heterogeneity: due to differing patient characteristics,
+a drug that may work for one person won't necessarily
+work for another. These concerns often drive researchers
+to investigate subgroup differences. Subgroups can
+be derived from any stratifying feature; male/female or mutation/no
+mutation are common stratifying factors. 
+
+To investigate subgroup differences, it's common for researchers
+to divide patients into separate cohorts based on the stratifying
+factor, perform a separate analysis for each cohort, and then
+compare findings between cohorts. For a survival analysis, this
+could be dividing patients into male and female cohorts,
+fitting Cox regressions for each cohort, and then comparing
+the hazard ratios and p-values between males and females. If any of
+the hazard ratios or p-values differ, investigators will often claim 
+effect heterogeneity between sexes. 
+
+Unfortunately there are problems with this analysis. First,
+splitting patients into separate cohorts reduces sample size,
+making it more difficult to detect effects. This is especially
+problematic when the subgroups are imbalanced. If there were 4x
+more males than females, it will be easier to find a "significant"
+hazard ratio for the males than the females because there are more
+males. Finding a significant hazard ratio in one cohort but not
+the other doesn't necessarily mean the effect sizes are differently;
+a smaller sample size in the female cohort may be making the p-value
+larger even though the underlying hazard ratios are the same.
+
+Second, subgroup analysis doesn't provide any means to test or
+estimate the effect difference between cohorts. Although males may have
+a different hazard ratio than females, how can we be sure this difference
+isn't due to sampling error? There also isn't an easy
+way to build a confidence interval for the hazard ratio difference
+betewen sexes. Without a p-value or confidence interval, it's hard
+to be confident that the male/female difference we're observing
+is truly real. 
+
+To remedy these problems, we should be using interaction terms
+in our regression formulas. An interaction term models how the hazard
+ratio of one variable changes for different values of another variable.
+An interaction term between treatment and mutation/no mutation could
+be used to assess whether patients with the mutation experience a
+better response. We can also compute p-values and confidence intervals
+for interaction terms, helping us understand our uncertainty about
+the effect heterogeneity. 
+
+Interactions are easy to include in R formulas
+
+```{r}
+interact.fit <- cph(Surv(dtime, status) ~ rx*bm, data = prostate)
+interact.fit
+```
+
+Above we've included an interaction term between treatment `rx` and 
+bone metastasis `bm`,
+useful if we suspect treatment efficacy differs between patients
+with and without bone metastases. In R, `x1*x2` specifies an interaction
+term between `x1` and `x2` and will also include `x1` and `x2` as separate
+terms. Its equivalent to writing `x1 + x2 + x1*x2`. We can look the p-values
+to weigh the evidence for treatment differences among bone metastases groups. 
+0.2 mg and 1.0 mg of estrogen have large p-values, suggesting there may be no
+difference in treatment effect between patients with/without bone metastasis.
+Although this seems logical from the p-values, be cautious interpretting
+interactions; most interactions are underpowered because sample
+sizes are often halved (or worse) due to the nature of comparing two
+separate groups. Interactions often require 16x the number of
+patients to achieve the same power as normal variables, so unless
+the analysis was powered for an interaction, interpret
+these results careful. 
+
+Meanwhile 5.0 mg estrogen's small p-value suggests evidence for
+treatment effect heterogeneity. `bm` is an indicator variable
+with a status of 0 (no metastasis) or 1 (bone metastasis). 
+We interpret the interaction as follows: if `bm = 1`, the coefficient
+would be -.8701, a rather large hazard reduction. If `bm = 0`,
+the coefficient is 0, because $0 * -.8701 = 0$. It seems
+patient's with bone metastases show a much better response
+to 5.0 mg of estrogen than patients without bone metastases.
+
+```{r}
+ggplot(Predict(interact.fit, rx=c("5.0 mg estrogen"), bm))
+```
+
+
+`anova()` will also tell us the overall effect of the
+interaction
+
+```{r}
+anova(interact.fit)
+```
+
+Make sure to check the overall interaction's p-value with
+anova before looking at individual level p-values. If the overall
+interaction isn't meaningfully small, the individual terms should be considered
+weak evidence.  
+
+A final note on interpretting interaction terms. If there is enough
+evidence to believe the interaction term is non-null, to calculate
+the final hazard ratio for each subgroup, we must add the two coefficients
+together. For people with bone metastases given 5.0 mg of estrogen, we would
+compute $
+
+
+### Checking Model Assumptions
+
+
