@@ -16,20 +16,43 @@ output:
 
 ## Introduction
 
-This notebook will demonstrate how to write code
-for survival analysis. Readers should already know the basics of R. 
-Calling functions, loading data, and manipulating
-dataframes should be familiar. It'll also
-be helpful to have taken an introductory statistics course
-and understand concepts like linear regression,
-hypothesis testing, p-values, and confidence intervals.
 
-Today we'll be examining a dataset from Green and Byar
-(1980, Bulletin Cancer, Paris, 67, 477-488) with 502
-prostate cancer patients from a randomized clinical
-trial for estrogen therapy. The dataset includes information 
-on cancer stage, treatment, age, weight, and 
-additional clinical measurements.
+The presentation covered statistical
+concepts we should be thinking about as
+we design studies and analyze survival data.
+This notebook will put these ideas into practice
+on real data using `R`. 
+
+
+Before reading this notebook, you should already know
+`R` basics like calling functions,
+loading data, and manipulating dataframes. It's also
+important to understand introductory level statistics
+concepts like hypothesis testing, p-values, confidence
+intervals, linear regression, and hazard ratios. If you're unsure
+of your R skills, Grolemund and Wickham have a good
+[book](https://r4ds.had.co.nz) 
+that explains how to use `R` for data analysis. 
+Brown University's 
+[Seeing Theory](https://seeing-theory.brown.edu/#firstPage)
+website is a good source for anyone needing to refresh
+their statistics.
+
+In this lesson we'll analyze survival data from
+a Randomized Clinical Trial of estrogen therapy for
+prostate cancer from Green and Byar 
+(1980, Bulletin Cancer, Paris, 67, 477-488). The dataset
+has information on 502 patients treated with different
+doses of estrogen and includes several clinical
+measurements (also known as covariates).
+
+Before we begin, remember that statistics can be complicated
+and it's always good to ask for help from a statistician!
+Feel free to send me an email at 
+[tjbencomo@gmail.com](tjbencomo@gmail.com) with questions. I'd be happy
+to help connect you with the right resources for your
+research!
+
 
 First, we load the necessary packages.
 
@@ -44,12 +67,12 @@ library(tidyr)
 ```
 
 `rms` provides tools for regression modeling. `dplyr` helps
-us easily manipulate dataframes. `ggplot2` will allow us
-to visualize our data. `rpart`, `mice`, and `tidyr` help us deal
+us easily manipulate dataframes. `ggplot2` makes data
+visualization easy. `rpart`, `mice`, and `tidyr` help us deal
 with missing data. `stringr` makes it easier to work
 with strings. 
 
-Next, we load the `prostate` dataset, included in the `rms` packages.
+Next, we load the `prostate` dataset, included in the `rms` package.
 
 ```{r}
 getHdata(prostate)
@@ -58,9 +81,9 @@ head(prostate)
 
 Before we begin our analysis, we should have already prespecified what
 questions we want to answer. Designing questions to investigate
-beforehand helps us plan the statistical analysis, mitigating bias.
+beforehand helps us plan the statistical analysis and mitigates bias.
 If we're conducting an exploratory analysis or data mining investigation,
-we should remember this as we weigh any significant findings. 
+we should remember this as we weigh any significant findings.
 
 In this tutorial we'll focus on the following questions:
 
@@ -72,14 +95,20 @@ In this tutorial we'll focus on the following questions:
 
 Before modeling it's important
 to conduct Exploratory Data Analysis (EDA) to become familiar
-with data nuances. This often includes looking
-at the distribution of each variable and understanding patterns 
-between variables. 
+with the data. This often includes looking
+at the distribution of each variable, understanding patterns 
+between variables, and checking for outliers.
+See Grolemund and Wickham's 
+[R For Data Science](https://r4ds.had.co.nz/exploratory-data-analysis.html)
+for details on conducting EDA in `R`.
 
 ### Data Cleaning
 
-There's a few adjustments to the prostate data we'll need to
-make. `status` is encoded with the cause of death.
+During EDA, we would have noticed some problems with the dataset
+that we'll need to fix. 
+`status` is encoded with the cause of death. Left unchanged,
+this will break our models because they are built to only
+handle either dead or censored. 
 Let's treat all causes of death as equal and encode 
 status so 1 means death and 0 means censored. Careful
 that you're aware how death is encoded! If death
@@ -95,12 +124,11 @@ prostate <- prostate %>%
 head(prostate)
 ```
 
-This dataset was already cleaned and encoding for teaching uses, so our job
-here is done. Be careful though; in a real analysis the data probably won't
-be this clean. Pay special attention to categorical variables that need
-to be encoded as factors. Check what the reference level is for each factor
-before moving onto modeling.
-
+Changing `status`'s encoding is the only fix we need to make. In the real
+world, data is almost never this neat. Be careful to check that everything
+is encoded properly before starting analysis. This includes making
+sure categorical variables are properly encoded as factors. 
+Check what the reference level is for each factor.
 The reference level is the "category" that is used to compare all other categories
 against. For example, `rx` has 4 categories:
 ```{r}
@@ -108,13 +136,14 @@ levels(prostate$rx)
 ```
 
 "placebo" is the first level, meaning it's the reference level. This makes sense,
-as we'll want to compare estrogen with the placebo. Failure to make sure
-all appropriate variables are properly encoded factors can cause errors in
+as we'll want to compare estrogen with the placebo. Use the `relevel()` command
+if you need to reorder your factor. Failure to make sure
+all appropriate variables are properly encoded can cause errors in
 the analysis.
 
 ### Missing Data
 
-EDA often tells us about missing data. 
+EDA often finds missing data. 
 Understanding and addressing missing data is crucial for
 modeling success. Excluding patients due to missing data can
 decrease sample size reducing power. It also risks biasing
@@ -196,7 +225,7 @@ plot(na.patterns)
 In this case, no patients are missing multiple values so the plot looks empty.
 If more data was missing, the plot would show a clustering map that
 groups variables missing together most often. This plot can help us identify
-which variables may dependent on each other (they may be measured at the same time). 
+which variables may be dependent on each other (they may be measured at the same time). 
 The empty plot indicates there isn't a systematic issue with missing data. To see
 more examples with `plot(na.patterns)`, refer to Frank Harrell's 
 [Regression Modeling Strategies (RMS)](http://hbiostat.org/doc/rms.pdf) 
@@ -210,18 +239,21 @@ Harrell proposes a general rule of thumb when deciding how to approach missing d
 
 | Amount Missing                         | What to do                                 |
 |----------------------------------------|--------------------------------------------|
-| Less than 3%                           | Median Imputation or case-wise deletion    |
+| Less than 3%                           | Median imputation or case-wise deletion    |
 | More than 3%                           | MICE with max(5, 100x) imputations         |
 | Multiple predictors frequently missing | Sensitivity analysis with more imputations |
 
 Median imputation is where we compute a median value for a variable, and replace
 all missing values with this median. Case-wise deletion means exlcuding patients
-with any missing values from analysis. If a sensitivity analysis is needed, 
+with any missing values from analysis. Multiple Imputation By Chained
+Equation (MICE) is an algorithm that tries to predict
+missing data values. If a sensitivity analysis is needed, 
 consult a statistician.
 
-Using MICE requires two key decision:
+MICE has several assumptions that must be met for the algorithm to work
+properly. Using MICE requires two key decisions:
 
-1. Is the MAR assumption plausible? If we can't assume MAR,
+1. Is it plausible to assume our missing data is MAR? If we can't assume MAR,
 time to find a statistician. 
 
 2. Assuming MAR, how will we model our missing data? What variables
@@ -231,26 +263,27 @@ should we use as information in our model?
 there are unmeasured variables that **significantly** correlate with
 missingness. Unmeasured variables that are only slightly correlated with 
 missingness should not prevent us from assuming MAR. We can also gather
-additional information outside of our survival analysis parameters of interest
-to build the imputation model. Although we may not be interested in analyzing
-the effect of hospital location on survival, we can still include this variable
-in our imputation model if it will help predict missingness. See section
+additional information outside of our survival analysis variables
+to build the MICE model. For example, we may not be interested in analyzing
+the effect of hospital location on survival, but which hospital the patient
+is from may determine if they have missing data. We can include this variable
+in our imputation model if it will help predict missingness even though
+we don't plan to analyze the effect of hospital on survival. See section
 6.2 in Stef van Burren's 
 [Flexible Imputation of Missing Data (FIMD)](https://stefvanbuuren.name/fimd/sec-whenignorable.html)
 for more details on deciding about MAR assumptions.
 
-For 2), we can model missing data using MICE (Multiple Imputation 
-By Chained Equation). We tell MICE which variables
+For 2), we can model missing data using MICE. We tell MICE which variables
 affect missingness, and then MICE uses these variables to
 generate a dataset with predicted values for missing data. Each predicted
-value has a random error component. We generate several datasets with
-different predicted values, analyze each dataset separate, and then
+value has a random error component. To properly use imputation, we generate
+several datasets with MICE, analyze each dataset separately, and then
 average our results across datasets. Using multiple datasets
 retains the uncertainty from data being missing.
 
 To use MICE, we need to specify our imputation model: which variables are we
 going to include, what imputation method are we going to use,
-and what order we will impute variables. MICE chooses chooses
+and what order we will impute variables. MICE chooses
 robust defaults for all of these decisions. Predictive
 Mean Matching `pmm` is the default imputation method. 
 When we pass `mice` a dataframe it will use all variables
@@ -259,7 +292,7 @@ in the dataframe for the imputation model. If there are more than
 may not run. In this case, we can tell MICE to only use some
 variables. Make sure to include all variables
 that you'll be analyzing (anything that is going in the Cox regression)
-and any variables that you suspect play a role in missingness.
+and any variables that you suspect play a significant role in missingness.
 
 See FIMD
 [section 6.3](https://stefvanbuuren.name/fimd/sec-modelform.html)
@@ -278,11 +311,11 @@ impute_fit <- fit.mult.impute(Surv(dtime, status) ~ rx + stage + rcs(age, 3),
 
 This code does two things. First, we use `mice()` to impute our missing data.
 The first argument `prostate` should be the dataframe 
-with missing values and any extra info about these missing values. 
-Notice we removed `patno` and `sdate` before using `mice()`.
-process. Don't include useless columns like PatientNumber. 
-This will only slow down or worsen the imputation.
- `m` is the number of imputations to generate. `method = 'pmm'` tells MICE
+with missing values and any extra variables to predict missing values. 
+Notice we removed `patno` and `sdate` before using `mice()` because they
+don't provide any information about missingness. Including them would only have
+slowed down or worsened the imputation.
+ `m` is the number of datasets to generate. `method = 'pmm'` tells MICE
 which imputation algorithm to use.
 
 After mice has run, `fit.mult.impute()` will build a model for each
@@ -309,6 +342,12 @@ Cox Proportional Hazards (PH) regression is one of the
 most popular forms of survival analysis because 
 we can analyze many variables at once with assumptions
 that are often reasonable for clinical practice.
+If you're not familiar with Generalized Linear Models
+(GLMs), it's helpful to think of Cox regression as
+a special form of linear regression. Unlike
+linear regression, the response variable $Y$
+in Cox regression is censored survival outcome and
+the explanatory variable $\beta$'s are log hazard ratios.
 
 The R packages `survival` and `rms` provide Cox
 regression functionality. In `survival`, users
@@ -322,9 +361,6 @@ let's us analyze the impact of several variable
 simultaneously by including any relevant
 variables in the regression equation. 
 
-We want to know if treatment improved
-survival for prostate patients and how
-age is related to survival.
 
 Before we can start modeling, we need
 to tell `rms` how the data is formatted.
@@ -334,6 +370,9 @@ ddist <- datadist(prostate)
 options(datadist="ddist")
 ```
 
+We want to know if treatment improved
+survival for prostate patients and how
+age is related to survival. 
 Including treatment `rx` and age `age` in
 our regression model will answer both
 these questions.
@@ -346,7 +385,7 @@ fit
 `cph` uses the formula notation to specify regression models. In
 formula notation, the response variable (usually denoted `Y`) is placed
 on the left hand side of the `~` and explanatory variables go
-on the right hand side (usually denoted `X`).
+on the right hand side (usually denoted `x1+x2+...`).
 
 Our response variable `Y` is censored survival time outcomes,
 represented by `Surv(dtime, status)`. `Surv` uses time to event (`dtime`)
@@ -362,7 +401,10 @@ for that dose compared against control.
 Age is treated as a continuous variable, with the assumption
 that age is linearly related to survival. With our data,
 this means that for every additional year patients will have
-an added $e^{0.0322} =$ `r exp(0.0322)` of hazard
+an added $e^{0.0322} =$ `r exp(0.0322)` of hazard.
+
+The arguments `x=T, y=T` tells `R` to store the dataset
+for later use plotting predictor relationships.
 
 To visualize age's relation to survival, we plot
 age vs hazard
@@ -379,8 +421,8 @@ shows that patients over the age of 70 have an increased risk of death from
 prostate cancer. A naive reader might see this hazard ratio and the p-value for
 age (p=.003) and conclude age causes an increased risk of death. Careful! Although age
 may be causally linked to death, this RCT wasn't designed to test age's causal
-effect on survival, only its relation. Hazard ratios and p-values alone
-can never determine causality for a variable; causality is determined
+effect on survival, only its association. Hazard ratios and p-values alone
+can never determine causality for a variable - causality is determined
 by the experimental design. Avoid making causal statements just because
 of small p-values!
 
@@ -396,20 +438,30 @@ restricted cubic splines. We can use splines to treat
 age as if it's nonlinearly related to survival.
 
 ```{r}
-nonlinear.fit <- cph(Surv(dtime, status) ~ rx + rcs(age,3), data = prostate, x=T, y=T)
+nonlinear.fit <- cph(Surv(dtime, status) ~ rx + rcs(age,5), data = prostate, x=T, y=T)
 nonlinear.fit
 ```
 
 We must choose how many knots to use when modeling nonlinear
 variables. The number of knots determines how closely the
 regression fits the data. It's recommended to use 3 to 5 knots
-for most problems: 3 for small datasets (~300 samples),
-4 for medium datasets (~500 samples), and 5 for large datasets 
-(~700 samples). Choosing the wrong number of knots can overfit
-the model. We chose 3 knots due to our smaller sample size. 
+for most problems: 3 for small datasets (~30 samples),
+4 for medium datasets (~60 samples), and 5 for large datasets 
+(~100 samples). These sample sizes are for uncensored data,
+so in most real world scenarios more samples will be needed 
+when dealing with censored data. If these rules
+seem arbitrary to the reader and you'd like to choose the number
+of knots based on the data, Harrell recommends choosing the number
+of knots that maximizes model likelihood $\chi^2 - 2k$ where $k$
+is the number of model parameters and $\chi^2$ is the $\chi^2$
+statistic calculated from the model's maximum likelihood estimation.
+This is `LR chi2` displayed in the `cph()` output under `Model Tests`.
+See RMS 2.4.6 for more information
+on restricted cubic splines and knot selection. 
 
 Multiple parameters are needed to model a nonlinear variable
-(`age` and `age'`). This makes interpretting our results more complicated.
+(`age` and `age'`, `age''`, and `age'''`). This makes interpretting our 
+results more complicated.
 Instead of just looking at the coefficient for `age`, we'll need to plot
 age vs hazard. 
 
@@ -422,10 +474,12 @@ ggplot(Predict(nonlinear.fit, age)) +
 A one year increase in age no longer has a simple effect on survival.
 It seems patients younger than 70 are all at a relatively equal
 lower probability of death from prostate cancer. After about 70 years of age, patients
-are at an increased risk. P-values are also not as straightforward to
+begin to experience increasing risk of death. P-values are also not as straightforward to
 interpret. Because age can have a non-monotonic relationship with
 survival, we need a p-value to test if the nonlinear age function
-is associated with survival, not individual age parameters
+is associated with survival, not individual age parameters. Do
+not try to interpret the individual p-values for the age parameters
+(`age` and `age'` etc).
 
 Using a chunk ANOVA test, we can compute p-values
 testing whether each predictor is associated with survival.
@@ -436,7 +490,7 @@ anova(nonlinear.fit)
 
 Both `rx` and `age` have strong evidence
 suggesting they're associated with survival.
-The nonlinear p-value subsection under Age tests
+The nonlinear p-value subsection under `Age` tests
 whether there is evidence of a nonlinear relationship
 between age and survival. If the p-value is large,
 this may mean age is  linearly related to survival.
@@ -448,7 +502,7 @@ See my Cross Validated
 [post](https://stats.stackexchange.com/questions/405832/interpretting-cox-regression-anova)
 for more details on interpretting the ANOVA.
 
-### Proper subgroup analysis using interactions
+### Subgroup analysis using interactions
 
 Precision medicine emphasizes treatment effect
 heterogeneity: due to differing patient characteristics,
@@ -474,10 +528,10 @@ making it more difficult to detect effects. This is especially
 problematic when the subgroups are imbalanced. If there were 4x
 more males than females, it will be easier to find a "significant"
 hazard ratio for the males than the females because there are more
-sapmles. Finding a significant hazard ratio in one cohort but not
+samples Finding a significant hazard ratio in one cohort but not
 the other doesn't necessarily mean the effect sizes are different;
 a smaller sample size in the female cohort may be making the p-value
-larger even though the underlying hazard ratios are the same.
+larger even though the hazard ratios are the same.
 
 Second, subgroup analysis doesn't provide any means to test or
 estimate the effect difference between cohorts. Although males may have
@@ -491,9 +545,10 @@ is truly real.
 To remedy these problems, we should be using interaction terms
 in our regression formulas. An interaction term models how the hazard
 ratio of one variable changes for different values of another variable.
-An interaction term between treatment and mutation/no mutation could
-be used to assess whether patients with the mutation experience a
-better response. We can also compute p-values and confidence intervals
+An interaction term between treatment and male/female could
+be used to assess whether female patients experience a
+better response than male patients. We can also compute p-values 
+and confidence intervals
 for interaction terms, helping us understand our uncertainty about
 the effect heterogeneity. 
 
@@ -516,7 +571,7 @@ difference in treatment effect between patients with/without bone metastasis.
 Although this seems logical from the p-values, be cautious interpretting
 interactions; most interactions are underpowered because sample
 sizes are often halved (or worse) due to the nature of comparing two
-separate subgroups groups. Interactions often require 16x the number of
+separate, smaller subgroups. Interactions often require 16x the number of
 patients to achieve the same power as normal variables, so unless
 the analysis was powered for an interaction, interpret
 these results carefully. 
@@ -527,9 +582,8 @@ with a status of 0 (no metastasis) or 1 (bone metastasis).
 We interpret the interaction as follows: if `bm = 1`, the coefficient
 would be -.8701, a rather large hazard reduction. If `bm = 0`,
 the coefficient is 0, because $0 * -.8701 = 0$. It seems
-patient's with bone metastases show a much better response
+patients with bone metastases show a much better response
 to 5.0 mg of estrogen than patients without bone metastases.
-
 
 `anova()` will also tell us the overall effect of the
 interaction
@@ -541,27 +595,33 @@ anova(interact.fit)
 Make sure to check the overall interaction's p-value with
 anova before looking at individual level p-values. If the overall
 interaction isn't meaningfully small, the individual terms should be considered
-weak evidence.  
+weak evidence. If at least one of your interaction terms includes a nonlinear
+continuous variable, make sure to use ANOVA to compute p-values - don't
+look at the individual p-values!
 
 A final note on interpretting interaction terms. If there is enough
 evidence to believe the interaction term is non-null, to calculate
-the final hazard ratio for each subgroup, we sum any related coefficients.
+the final hazard ratio for a variable, we must add all log hazard ratios
+that relate to that variable.
 
-Our Cox regression takes the following form
+Seeing the Cox regression formula helps us understand what coefficients
+we need to add. For our model with `rx`, `bm` and their interaction, 
+the regression looks like
 
 $$
 \lambda(t) = \lambda_0(t)\text{exp}({\beta_1x_1 + \beta_2x_2+\beta_3x_3 + \beta_4x_4 + \beta_5x_1x_4 + \beta_6x_2x_4 + \beta_7x_3x_4})
 $$
 
 where $x_1$ indicates 0.2 mg estrogen, $x_2$ indicates 1.0 mg estrogen, $x_3$ indicates
-5.0 mg estrogen, and $x_4$ indicates bone metastasis. $\beta_5$, $\beta_6$, and $\beta_7$
-represent the interaction terms. To compute the full hazard 
+5.0 mg estrogen, and $x_4$ indicates bone metastasis. $\beta_i$ is the log hazard ratio
+for the $i$th variable. $\beta_5$, $\beta_6$, and $\beta_7$
+represent the interaction term coefficients. To compute the full hazard 
 for bone metastasis ($x_4 = 1$) patients treated with 5.0 mg 
 estrogen ($x_3 = 1$ and $x_1, x_2 = 0$) we'd add
 
 $$
-e^{\beta_3 + \beta_4 + \beta_7} = \text{HR}\\
-e^{0.1112 + 1.0804 + -0.8701} = 1.379195
+\text{exp}({\beta_3 + \beta_4 + \beta_7}) = \text{HR}\\
+\text{exp}({0.1112 + 1.0804 -0.8701}) = 1.379195
 $$
 
 This is confirmed when we plot the hazard for bone metastasis for
@@ -583,7 +643,7 @@ Once we've fitted our model, we need to check our
 assumptions before accepting our results. The important
 assumption in Cox regression is the Proportional
 Hazards (PH) assumption. This means that the hazard
-ratio for stays constant over time. 
+ratio for any variables in the model stays constant over time. 
 
 We can test these assumptions with `cox.zph()`
 
@@ -597,6 +657,7 @@ Above we tested our first model that included
 treatment and linear age. There's evidence that the
 hazard ratio for age changes over time, and this
 is problematic for our model (GLOBAL p=.02159).
+A small p-value suggests the PH assumption is broken.
 When continuous variables break the PH assumption,
 modeling them as nonlinear variables can correct
 the PH problems. 
@@ -629,9 +690,9 @@ usually aren't interested in the actual hazard ratio for each hosptial.
 
 If you're still having trouble with PH assumptions
 after trying nonlinear modeling and stratification,
-Cox may not be appropriate for our analysis. Accelerated
-time failure (AFT) models may better suited for the data.
-See RMS Chapter 18 for information on parametric AFT models.
+Cox may not be appropriate for your analysis. Accelerated
+time failure (AFT) models may be more appropriate.
+See RMS Chapter 18 for information on AFT models.
 
 
 ## Conclusion
@@ -639,10 +700,11 @@ See RMS Chapter 18 for information on parametric AFT models.
 During this tutorial we've covered data preparation,
 missing data, and survival analysis with Cox regression.
 Our explanations for each topic are just the tip of the iceberg.
+
 Missing data is a complex topic with considerable research to
 support imputation methods. See [Flexible Imputation
 For Missing Data](https://stefvanbuuren.name/fimd/) by Stef
-van Burren for more information. 
+van Burren for an indepth look at imputation. 
 
 Although we focused on effect estimation with the Cox model,
 regression modeling is also used for prediction. Frank Harrell's
@@ -651,7 +713,7 @@ covers regression and its applications in much more depth.
 
 Finally, Sashegyi and Ferry have a good explanation of hazard
 ratios and how to communicate their meaning with clinicians
-[here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5388384/)
+[here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5388384/).
 
 
 
