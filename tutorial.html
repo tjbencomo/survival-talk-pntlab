@@ -3040,7 +3040,7 @@ fit</code></pre>
 <p>Remember that log(HR) &gt; 0 means an increased risk of death. To plot hazard ratio instead, set <code>fun = exp</code> inside <code>Predict()</code>. The plot shows that patients over the age of 70 have an increased risk of death from prostate cancer. A naive reader might see this hazard ratio and the p-value for age (p=.003) and conclude age causes an increased risk of death. Careful! Although age may be causally linked to death, this RCT wasn’t designed to test age’s causal effect on survival, only its association. Hazard ratios and p-values alone can never determine causality for a variable - causality is determined by the experimental design. Avoid making causal statements just because of small p-values!</p>
 </div>
 <div id="relaxing-the-linearity-assumption" class="section level3">
-<h3>Relaxing the linearity assumption</h3>
+<h3>Relaxing the Linearity Assumption</h3>
 <p>Some continuous variables may not be linearly related to survival. When we have sufficient sample size, it’s optimal to treat these variables as nonlinear. This will improve power to detect a relationship and can improve effect estimation.</p>
 <p><code>rms</code> uses <code>rcs()</code> to model nonlinear variable with restricted cubic splines. We can use splines to treat age as if it’s nonlinearly related to survival.</p>
 <pre class="r"><code>nonlinear.fit &lt;- cph(Surv(dtime, status) ~ rx + rcs(age,5), data = prostate, x=T, y=T)
@@ -3087,7 +3087,7 @@ nonlinear.fit</code></pre>
 <p>See my Cross Validated <a href="https://stats.stackexchange.com/questions/405832/interpretting-cox-regression-anova">post</a> for more details on interpretting the ANOVA.</p>
 </div>
 <div id="subgroup-analysis-using-interactions" class="section level3">
-<h3>Subgroup analysis using interactions</h3>
+<h3>Subgroup Analysis Using Interactions</h3>
 <p>Precision medicine emphasizes treatment effect heterogeneity: due to differing patient characteristics, a drug that may work for one person won’t necessarily work for another. These concerns often drive researchers to investigate subgroup differences. Subgroups can be derived from any stratifying feature; male/female or mutation/no mutation are common stratifying factors.</p>
 <p>To investigate subgroup differences, it’s common for researchers to divide patients into separate cohorts based on the stratifying factor, perform a separate analysis for each cohort, and then compare findings between cohorts. For a survival analysis, this could mean dividing patients into male and female cohorts, fitting Cox regressions for each cohort, and then comparing the hazard ratios and p-values between males and females. If any of the hazard ratios or p-values differ, investigators will often claim effect heterogeneity between sexes.</p>
 <p>Unfortunately there are problems with this analysis. First, splitting patients into separate cohorts reduces sample size, making it more difficult to detect effects. This is especially problematic when the subgroups are imbalanced. If there were 4x more males than females, it will be easier to find a “significant” hazard ratio for the males than the females because there are more samples. Finding a significant hazard ratio in one cohort but not the other doesn’t necessarily mean the effect sizes are different; a smaller sample size in the female cohort may be making the p-value larger even though the hazard ratios are the same.</p>
