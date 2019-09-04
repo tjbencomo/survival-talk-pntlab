@@ -118,7 +118,7 @@ prostate <- prostate %>%
 head(prostate)
 ```
 
-Other variables need to be converted to factors
+Categorical variables need to be converted to factors
 
 ```{r}
 prostate <- prostate %>%
@@ -128,7 +128,8 @@ prostate <- prostate %>%
 ```
 
 
-Fixing `status` and factor variables are the only fix we need to make. In the real
+Fixing `status` and encoding categorical variables as factors 
+are the only fixes we need to make. In the real
 world, data is almost never this clean. Be careful to check that everything
 is encoded properly before starting analysis. This includes making
 sure categorical variables are properly encoded as factors. 
