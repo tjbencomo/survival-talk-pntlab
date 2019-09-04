@@ -1,5 +1,6 @@
 ---
 title: "Prostate Cancer Case Study"
+author: Tomas Bencomo and Kyle W. Singleton
 output:
   html_document:
     df_print: paged
@@ -12,7 +13,6 @@ output:
     toc_depth: 3
     toc_float:
       collapsed: yes
-  
 ---
 
 ## Introduction
@@ -118,11 +118,21 @@ prostate <- prostate %>%
 head(prostate)
 ```
 
-Changing `status`'s encoding is the only fix we need to make. In the real
+Other variables need to be converted to factors
+
+```{r}
+prostate <- prostate %>%
+  mutate(stage = factor(stage),
+         hx = factor(stage),
+         bm = factor(bm))
+```
+
+
+Fixing `status` and factor variables are the only fix we need to make. In the real
 world, data is almost never this clean. Be careful to check that everything
 is encoded properly before starting analysis. This includes making
 sure categorical variables are properly encoded as factors. 
-Check what the reference level is for each factor.
+Check  the reference level for each factor.
 The reference level is the "category" that is used to compare all other categories
 against. For example, `rx` has 4 categories:
 ```{r}
