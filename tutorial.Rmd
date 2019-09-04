@@ -12,6 +12,7 @@ output:
     toc_depth: 3
     toc_float:
       collapsed: yes
+  
 ---
 
 ## Introduction
@@ -472,7 +473,7 @@ can never determine causality for a variable - causality is determined
 by the experimental design. Avoid making causal statements just because
 of small p-values!
 
-### Relaxing the linearity assumption
+### Relaxing the Linearity Assumption
 
 Some continuous variables may not be linearly related to survival.
 When we have sufficient sample size, it's optimal to treat
@@ -551,7 +552,7 @@ See my Cross Validated
 [post](https://stats.stackexchange.com/questions/405832/interpretting-cox-regression-anova)
 for more details on interpretting the ANOVA.
 
-### Subgroup analysis using interactions
+### Subgroup Analysis Using Interactions
 
 Precision medicine emphasizes treatment effect
 heterogeneity: due to differing patient characteristics,
