@@ -442,7 +442,7 @@ Given the treatment effect and significance above for 1.0 mg of estrogen,
 the results indicate 1.0 mg of estrogen cause a `r 1 - exp(rx.fit$coefficients[2])`
 reduction in hazard.Other doses of estrogen actually had small increases in
 effect on risk of death in the study population, but those effects were
-not conclusively proven to be difficult than treatment with placebo.
+not conclusively proven to be different than treatment with placebo.
 
 ### Covariate Adjustment
 
@@ -633,7 +633,7 @@ An interaction term between treatment and male/female could
 be used to assess whether female patients experience a
 better response than male patients. We can also compute p-values 
 and confidence intervals
-for interaction terms, helping us understand our uncertainty about
+for interaction terms, helping us understand the uncertainty around
 the treatment effect heterogeneity. 
 
 Interactions are easy to include in `R` formulas
@@ -648,7 +648,7 @@ bone metastasis `bm`,
 useful if we suspect treatment efficacy differs between patients
 with and without bone metastases. In `R`, `x1*x2` specifies an interaction
 term between `x1` and `x2` and will also include `x1` and `x2` as separate
-terms. It's equivalent to writing `x1 + x2 + x1*x2`. We can look the hazard ratios
+terms. It's equivalent to writing `x1 + x2 + x1*x2`. We can look at the hazard ratios
 and p-values
 to weigh the evidence for treatment differences among bone metastases groups. 
 0.2 mg and 1.0 mg of estrogen have large p-values, suggesting there may be no
@@ -703,7 +703,7 @@ where $x_1$ indicates 0.2 mg estrogen, $x_2$ indicates 1.0 mg estrogen, $x_3$ in
 for the $i$th variable. $\beta_5$, $\beta_6$, and $\beta_7$
 represent the interaction term coefficients. To compute the full hazard 
 for bone metastasis ($x_4 = 1$) patients treated with 5.0 mg 
-estrogen ($x_3 = 1$ and $x_1, x_2 = 0$) we'd add
+estrogen ($x_3 = 1$ and $x_1, x_2 = 0$) we'd compute
 
 $$
 \text{exp}({\beta_3 + \beta_4 + \beta_7}) = \text{HR}\\
