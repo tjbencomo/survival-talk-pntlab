@@ -1,6 +1,8 @@
 # survival-talk-pntlab
 Best practices for survival analysis given at the Mayo Clinic Precision Neurotheraputics Lab (Summer 2019). 
 
+`survival_talk.pdf` contains the lecture slides and `tutorial.Rmd` is a case study on prostate cancer with code.
+
 ## Goals
 The talk is meant to introduce non-statisticians to 
 several topics needed for survival analysis including:
