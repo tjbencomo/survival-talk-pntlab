@@ -3,12 +3,12 @@ Best practices for survival analysis given at the Mayo Clinic Precision Neurothe
 
 ## Goals
 The talk is meant to introduce non-statisticians to 
-several topics needed for survival analyis including:
+several topics needed for survival analysis including:
 * Multivariable regression strategies
 * Do's and don'ts of variable selection
 * Maximizing sample size with imputation
 * Interpretation and reporting of statistical results
-* Awareness of problems with observational data (covariate imbalance, confounding etc)
+* Awareness of problems with observational data (covariate imbalance, confounding, etc.)
 
 ## Dependencies
 Make sure the following `R` packages are installed before running the notebook
@@ -25,4 +25,4 @@ using evidence based medicine to evaluate medical practices.
 **Kyle W. Singleton** is a Research Fellow at the Precision Neurotheraputics Lab
 at Mayo Clinic Arizona. He received his PhD in Biomedical Informatics from UCLA. His
 research focuses on radiomics methods using Magnetic Resonance Imaging (MRI) to
-guide treatment decisions for Glioblastoma patients. 
+guide treatment decisions for glioblastoma patients. 
