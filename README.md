@@ -19,7 +19,7 @@ install.packages(c("rms", "rpart", "dplyr", "ggplot2", "mice", "stringr", "tidyr
 ```
 
 ## About the Authors
-**Tomas Bencomo** is a B.S candidate in Computer Science at Stanford
+**Tomas Bencomo** is a B.S. candidate in Computer Science at Stanford
 University. His research interests include using informatics to accelerate
 biological discoveries, building tools to improve physician decision making, and 
 using evidence based medicine to evaluate medical practices.
